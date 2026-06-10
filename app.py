@@ -1,6 +1,6 @@
 import streamlit as st
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_openai import OpenAIEfrom 
+from langchain_openai import OpenAIEmbeddigns
 from langchain.chains import RetrievalQA
 from langchain_community.vectorstores import Chroma
 from duckduckgo_search import DDGS
