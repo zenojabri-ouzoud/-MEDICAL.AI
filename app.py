@@ -1,61 +1,133 @@
-import streamlit as st
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from langchain_community.vectorstores import Chroma
-from langchain.chains import create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.prompts import ChatPromptTemplate
-from duckduckgo_search import DDGS
+import pygame
 
-# إعدادات الواجهة
-st.set_page_config(page_title="Medical AI Assistant", layout="wide")
-st.title("🩺 المساعد الطبي المتكامل")
+# إعدادات الشاشة
+TILE_SIZE = 40
+# تعريف الألوان
+WHITE, BLACK, RED, BLUE = (255, 255, 255), (0, 0, 0), (255, 0, 0), (0, 0, 255)
 
-# 1. نظام رفع الملفات المتعددة
-st.sidebar.title("إدارة المصادر")
-uploaded_files = st.sidebar.file_uploader("ارفع الملفات الطبية (PDF):", type=["pdf"], accept_multiple_files=True)
-
-# تهيئة الذاكرة (Chat History)
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# 2. معالجة الملفات في الخلفية
-if uploaded_files:
-    documents = []
-    for uploaded_file in uploaded_files:
-        with open(f"temp_{uploaded_file.name}", "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        loader = PyPDFLoader(f"temp_{uploaded_file.name}")
-        documents.extend(loader.load())
+# تعريف 20 مستوى بتصاعد في الصعوبة
+levels = [
+    # المستوى 1 - سهل جداً
+    [[1,1,1,1,1], [1,0,0,0,1], [1,0,1,2,1], [1,1,1,1,1]],
     
-    # تحويل الملفات لقاعدة بيانات
-    vectorstore = Chroma.from_documents(documents, OpenAIEmbeddings())
-    chain = RetrievalQA.from_chain_type(llm=ChatOpenAI(model="gpt-4"), retriever=vectorstore.as_retriever())
-    st.session_state.chain = chain
+    # المستوى 2
+    [[1,1,1,1,1], [1,0,1,0,1], [1,0,1,0,1], [1,0,0,2,1], [1,1,1,1,1]],
+    
+    # المستوى 3
+    [[1,1,1,1,1,1], [1,0,0,0,0,1], [1,0,1,1,0,1], [1,0,0,1,2,1], [1,1,1,1,1,1]],
+    
+    # المستوى 4
+    [[1,1,1,1,1,1], [1,0,1,0,0,1], [1,0,1,0,1,1], [1,0,0,0,2,1], [1,1,1,1,1,1]],
+    
+    # المستوى 5
+    [[1,1,1,1,1,1], [1,0,0,1,0,1], [1,0,1,1,0,1], [1,0,0,0,2,1], [1,1,1,1,1,1]],
+    
+    # المستوى 6
+    [[1,1,1,1,1,1,1], [1,0,0,1,0,0,1], [1,0,1,1,0,1,1], [1,0,0,0,0,2,1], [1,1,1,1,1,1,1]],
+    
+    # المستوى 7
+    [[1,1,1,1,1,1,1], [1,0,0,0,1,0,1], [1,0,1,0,1,0,1], [1,0,1,0,0,2,1], [1,1,1,1,1,1,1]],
+    
+    # المستوى 8
+    [[1,1,1,1,1,1,1], [1,0,0,1,0,0,1], [1,0,1,0,1,0,1], [1,0,0,0,1,2,1], [1,1,1,1,1,1,1]],
+    
+    # المستوى 9
+    [[1,1,1,1,1,1,1,1], [1,0,0,0,1,0,0,1], [1,0,1,0,1,0,1,1], [1,0,0,0,1,0,2,1], [1,1,1,1,1,1,1,1]],
+    
+    # المستوى 10
+    [[1,1,1,1,1,1,1,1], [1,0,0,1,0,0,0,1], [1,0,1,1,0,1,0,1], [1,0,0,0,0,0,2,1], [1,1,1,1,1,1,1,1]],
+    
+    # المستوى 11
+    [[1,1,1,1,1,1,1,1], [1,0,1,0,0,1,0,1], [1,0,1,0,1,1,0,1], [1,0,0,0,0,0,2,1], [1,1,1,1,1,1,1,1]],
+    
+    # المستوى 12
+    [[1,1,1,1,1,1,1,1], [1,0,1,0,0,0,0,1], [1,0,1,0,1,1,0,1], [1,0,0,0,1,0,2,1], [1,1,1,1,1,1,1,1]],
+    
+    # المستوى 13
+    [[1,1,1,1,1,1,1,1,1], [1,0,0,1,0,0,0,0,1], [1,0,1,1,0,1,1,0,1], [1,0,0,0,0,0,0,2,1], [1,1,1,1,1,1,1,1,1]],
+    
+    # المستوى 14
+    [[1,1,1,1,1,1,1,1,1], [1,0,0,0,1,0,0,0,1], [1,0,1,0,1,0,1,0,1], [1,0,0,0,0,0,0,2,1], [1,1,1,1,1,1,1,1,1]],
+    
+    # المستوى 15
+    [[1,1,1,1,1,1,1,1,1], [1,0,0,0,1,0,0,0,1], [1,0,1,0,1,0,1,0,1], [1,0,1,0,0,0,1,2,1], [1,1,1,1,1,1,1,1,1]],
+    
+    # المستوى 16
+    [[1,1,1,1,1,1,1,1,1,1], [1,0,0,0,1,0,0,0,0,1], [1,0,1,0,1,0,1,1,0,1], [1,0,0,0,0,0,0,0,2,1], [1,1,1,1,1,1,1,1,1,1]],
+    
+    # المستوى 17
+    [[1,1,1,1,1,1,1,1,1,1], [1,0,0,1,0,0,1,0,0,1], [1,0,1,0,0,0,1,0,1,1], [1,0,0,0,1,0,0,0,2,1], [1,1,1,1,1,1,1,1,1,1]],
+    
+    # المستوى 18
+    [[1,1,1,1,1,1,1,1,1,1], [1,0,1,0,0,1,0,0,0,1], [1,0,1,0,1,0,0,1,0,1], [1,0,0,0,0,0,1,0,2,1], [1,1,1,1,1,1,1,1,1,1]],
+    
+    # المستوى 19
+    [[1,1,1,1,1,1,1,1,1,1], [1,0,1,0,0,0,0,0,0,1], [1,0,1,0,1,1,1,1,0,1], [1,0,0,0,0,0,0,0,2,1], [1,1,1,1,1,1,1,1,1,1]],
+    
+    # المستوى 20 - الأصعب
+    [[1,1,1,1,1,1,1,1,1,1,1], [1,0,0,1,0,0,0,1,0,0,1], [1,0,1,0,0,1,0,1,0,1,1], [1,0,0,0,1,0,0,0,0,2,1], [1,1,1,1,1,1,1,1,1,1,1]]
+]
 
-# 3. واجهة المحادثة (Chat Interface)
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+current_level = 0
+player_pos = [1, 1] # [x, y]
 
-# 4. إمكانية المحادثة والبحث
-if prompt := st.chat_input("اسألني عن أي شيء طبي..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+pygame.init()
+# حساب حجم الشاشة بناءً على أكبر مستوى
+max_width = max(len(level[0]) for level in levels) * TILE_SIZE
+max_height = max(len(level) for level in levels) * TILE_SIZE
+screen = pygame.display.set_mode((max_width, max_height))
+pygame.display.set_caption("لعبة المتاهة - 20 مستوى")
+clock = pygame.time.Clock()
 
-    with st.chat_message("assistant"):
-        if "chain" in st.session_state:
-            response = st.session_state.chain.invoke(prompt)
-            result = response['result']
-            st.markdown(result)
+def draw_game():
+    maze = levels[current_level]
+    for r, row in enumerate(maze):
+        for c, tile in enumerate(row):
+            color = WHITE if tile == 0 else (BLACK if tile == 1 else RED)
+            pygame.draw.rect(screen, color, (c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+    
+    # رسم اللاعب
+    pygame.draw.rect(screen, BLUE, (player_pos[0] * TILE_SIZE, player_pos[1] * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+
+# عرض المستوى الحالي
+font = pygame.font.Font(None, 36)
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT: 
+            running = False
+        
+        # منطق الحركة
+        if event.type == pygame.KEYDOWN:
+            new_x, new_y = player_pos[0], player_pos[1]
+            if event.key == pygame.K_UP: new_y -= 1
+            elif event.key == pygame.K_DOWN: new_y += 1
+            elif event.key == pygame.K_LEFT: new_x -= 1
+            elif event.key == pygame.K_RIGHT: new_x += 1
             
-            # البحث عن صورة توضيحية تلقائياً
-            with DDGS() as ddgs:
-                img_res = list(ddgs.images(prompt, max_results=1))
-                if img_res:
-                    st.image(img_res[0]['image'], caption="صورة توضيحية من الويب")
-            
-            st.session_state.messages.append({"role": "assistant", "content": result})
-        else:
-            st.warning("يرجى رفع ملف طبي أولاً!")
+            # التأكد من أن الإحداثيات داخل حدود المتاهة
+            if 0 <= new_y < len(levels[current_level]) and 0 <= new_x < len(levels[current_level][0]):
+                # التحقق من الاصطدام بالجدران
+                if levels[current_level][new_y][new_x] != 1:
+                    player_pos = [new_x, new_y]
+                    
+                    # التحقق من الوصول للنهاية
+                    if levels[current_level][new_y][new_x] == 2:
+                        current_level += 1
+                        player_pos = [1, 1] # إعادة التموضع للبداية
+                        if current_level >= len(levels):
+                            print("مبروك! أنهيت كل المستويات العشرين!")
+                            running = False
+
+    screen.fill(BLACK)
+    draw_game()
+    
+    # عرض رقم المستوى
+    level_text = font.render(f"Level: {current_level + 1}/20", True, (255, 255, 0))
+    screen.blit(level_text, (10, 10))
+    
+    pygame.display.flip()
+    clock.tick(30)
+
+pygame.quit()
